@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #06080c;
+  --color-card: #0f141b;
+  --color-card2: #161d27;
+  --color-line: #222c3a;
+  --color-muted: #8392a6;
+  --color-neon: #00f08a;
+  --color-gold: #ffd23f;
+  --color-ta: #2f8cff;
+  --color-tb: #ff3d6e;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-inter), system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: #eef2f7;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background-image:
+    radial-gradient(900px 400px at 50% -120px, rgba(0, 240, 138, 0.10), transparent 70%),
+    radial-gradient(600px 300px at 100% 0, rgba(47, 140, 255, 0.08), transparent 70%);
+  background-attachment: fixed;
+  min-height: 100dvh;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.glow-neon {
+  text-shadow: 0 0 18px rgba(0, 240, 138, 0.55);
+}
+.glow-gold {
+  text-shadow: 0 0 22px rgba(255, 210, 63, 0.6);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker {
+  animation: ticker 40s linear infinite;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.pop-in {
+  animation: pop-in 0.25s ease-out both;
+}
+
+/* Card flip for Day 2 reveal */
+.flip {
+  perspective: 900px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+@keyframes shine {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.shine {
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shine 3s linear infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+input, textarea, select { font-size: 16px; } /* stop iOS zoom */
