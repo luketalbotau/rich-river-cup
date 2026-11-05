@@ -95,12 +95,9 @@ export default function MatchPage() {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button href={`/bets/new?market=match&match=${match.id}`} variant="gold" className="text-sm">
+      <div className="mt-3">
+        <Button href={`/bets/new?market=match&match=${match.id}`} variant="gold" className="w-full text-sm">
           Bet on match
-        </Button>
-        <Button href={`/bets/new?market=hole&match=${match.id}`} variant="ghost" className="text-sm">
-          Bet on a hole
         </Button>
       </div>
 
