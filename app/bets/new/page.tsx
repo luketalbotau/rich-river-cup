@@ -71,7 +71,6 @@ function NewBetInner() {
       <h1 className="pt-2 font-display text-4xl font-black uppercase italic">New Bet</h1>
 
       <div className="mt-3 flex gap-1 rounded-xl border border-line bg-card p-1">
-        {seg("hole", "Hole")}
         {seg("match", "Match")}
         {seg("overall", "Weekend")}
       </div>
