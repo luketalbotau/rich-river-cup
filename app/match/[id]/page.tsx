@@ -96,7 +96,7 @@ export default function MatchPage() {
       </div>
 
       <div className="mt-3">
-        <Button href={`/bets/new?market=match&match=${match.id}`} variant="gold" className="w-full text-sm">
+        <Button href={`/bets#pool-${match.id}`} variant="gold" className="w-full text-sm">
           Bet on match
         </Button>
       </div>
