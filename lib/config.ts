@@ -34,5 +34,8 @@ export const DEFAULT_TEAM_NAMES: Record<TeamId, string> = {
   B: "Team Gossy",
 };
 
+/** What every player has at risk in the $50 deal. */
+export const STAKE_EACH = 50;
+
 /** Per-hole probabilities used by the live odds model (no handicaps). */
 export const ODDS_MODEL = { win: 0.38, halve: 0.24 };

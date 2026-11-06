@@ -1,4 +1,4 @@
-import { CAPTAINS, DRAFT_ORDER, HOLES, ODDS_MODEL, POINTS } from "./config";
+import { CAPTAINS, DRAFT_ORDER, HOLES, ODDS_MODEL, POINTS, STAKE_EACH } from "./config";
 import type {
   Bet,
   HoleWinner,
@@ -480,6 +480,67 @@ export function stakePartners(pool: PoolView, stakeId: string) {
   return [...out.entries()].map(([playerId, amount]) => ({ playerId, amount }));
 }
 
+// ---------------- The $50 deal ----------------
+// Every player has $50 at risk. After both days, every player on the losing
+// team pays $50 to the winning individual (most points on the Leaders page).
+// Teams level: nobody pays. Tie for most points: the tied players split it.
+
+export interface IndividualRow { id: string; d1: number; d2: number; total: number }
+
+export function individualPoints(s: State, d: Derived): IndividualRow[] {
+  return s.players
+    .map((p) => {
+      let d1 = 0, d2 = 0;
+      for (const m of d.matches) {
+        const side: Side | null = m.match.a.includes(p.id) ? "A" : m.match.b.includes(p.id) ? "B" : null;
+        if (!side) continue;
+        const won = side === "A" ? m.sum.wonA : m.sum.wonB;
+        if (m.match.day === 1) d1 += won * POINTS[1];
+        else d2 += won * POINTS[2];
+      }
+      return { id: p.id, d1, d2, total: d1 + d2 };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+export interface DealView {
+  /** every hole of both days has been played */
+  final: boolean;
+  started: boolean;
+  /** the team ahead right now (or the winner once final). "H" = level */
+  teamLeader: HoleWinner;
+  losingTeam: TeamId | null;
+  topIds: string[];
+  topPoints: number;
+  /** who pays who, if it finished right now */
+  payments: Transfer[];
+  /** what each top player would receive */
+  prize: Record<string, number>;
+}
+
+export function dealView(s: State, d: Derived): DealView {
+  const diff = d.totals.A - d.totals.B;
+  const teamLeader: HoleWinner = diff > 0 ? "A" : diff < 0 ? "B" : "H";
+  const losingTeam: TeamId | null = teamLeader === "H" ? null : teamLeader === "A" ? "B" : "A";
+  const rows = individualPoints(s, d);
+  const topPoints = rows[0]?.total ?? 0;
+  const topIds = topPoints > 0 ? rows.filter((r) => r.total === topPoints).map((r) => r.id) : [];
+  const payments: Transfer[] = [];
+  const prize: Record<string, number> = {};
+  if (losingTeam && topIds.length) {
+    for (const p of s.players.filter((x) => x.team === losingTeam)) {
+      const to = topIds.filter((id) => id !== p.id);
+      if (!to.length) continue;
+      const each = round2(STAKE_EACH / to.length);
+      for (const id of to) {
+        payments.push({ from: p.id, to: id, amount: each });
+        prize[id] = round2((prize[id] ?? 0) + each);
+      }
+    }
+  }
+  return { final: d.totals.complete, started: d.totals.started, teamLeader, losingTeam, topIds, topPoints, payments, prize };
+}
+
 // ---------------- Ledger ----------------
 
 export interface Transfer { from: string; to: string; amount: number }
@@ -521,12 +582,23 @@ export function ledger(s: State, d: Derived) {
       else if (r.net < -0.004) record[r.playerId].l++;
     }
   }
+  const deal = dealView(s, d);
+  if (deal.final) {
+    for (const t of deal.payments) {
+      balance[t.to] += t.amount;
+      balance[t.from] -= t.amount;
+      pnl[t.to] += t.amount;
+      pnl[t.from] -= t.amount;
+    }
+    for (const id of Object.keys(deal.prize)) record[id].w++;
+    for (const id of new Set(deal.payments.map((t) => t.from))) record[id].l++;
+  }
   for (const pay of s.payments) {
     balance[pay.from] += pay.amount;
     balance[pay.to] -= pay.amount;
   }
   for (const id in pnl) pnl[id] = round2(pnl[id]);
-  return { balance, pnl, record, settled, pools, transfers: simplify(balance) };
+  return { balance, pnl, record, settled, pools, deal, transfers: simplify(balance) };
 }
 
 function simplify(balance: Record<string, number>): Transfer[] {
