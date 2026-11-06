@@ -102,7 +102,26 @@ export default function LedgerPage() {
         })}
       </div>
 
-      <SectionTitle>Settled bets</SectionTitle>
+      <SectionTitle>Results</SectionTitle>
+      {L.deal.final ? (
+        <div className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">
+          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">The $50 deal</div>
+          {L.deal.payments.length ? (
+            L.deal.payments.map((t, i) => (
+              <div key={i} className="flex items-center justify-between border-b border-line px-3 py-2 text-sm last:border-0">
+                <span>
+                  <b>{pname(s, t.from)}</b> <span className="text-muted">→</span> <b>{pname(s, t.to)}</b>
+                </span>
+                <span className="font-display text-lg font-bold text-gold">{money(t.amount)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-muted">The teams finished level, so nobody pays.</div>
+          )}
+        </div>
+      ) : (
+        <div className="mb-2 rounded-2xl border border-dashed border-line p-4 text-center text-sm text-muted">The $50 deal is worked out once both days are finished.</div>
+      )}
       {L.pools.map((pool) => (
         <div key={pool.id} className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">
           <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">{pool.label}</div>
@@ -128,9 +147,7 @@ export default function LedgerPage() {
             </div>
           ))}
         </div>
-      ) : L.pools.length ? null : (
-        <Empty>No settled bets yet.</Empty>
-      )}
+      ) : null}
 
       {s.payments.length > 0 && (
         <>
