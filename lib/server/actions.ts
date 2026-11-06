@@ -102,7 +102,6 @@ export async function runAction(
     case "draftUndo": {
       if (!captainTeam(need())) fail("Only captains can undo picks");
       if (s.holes.length) fail("Scores have been entered. Can't change the draft now");
-      if (s.pairs.A.locked || s.pairs.B.locked) fail("Day 2 pairs are locked. Unlock them first");
       const last = d.draft.picks[d.draft.picks.length - 1] ?? fail("No picks to undo");
       await db.put([
         [`player:${last.id}`, { ...(rows.get(`player:${last.id}`) ?? {}), team: null, pick: null }],
@@ -134,6 +133,7 @@ export async function runAction(
       return {};
     }
     case "lockPairs": {
+      fail("Pairs are set by the draft order now");
       const team = captainTeam(need()) ?? fail("Only captains can set pairs");
       if (!d.draft.complete) fail("Finish the draft first");
       if (d.revealed) fail("Pairs are already revealed");
@@ -151,6 +151,7 @@ export async function runAction(
       return {};
     }
     case "unlockPairs": {
+      fail("Pairs are set by the draft order now");
       const team = captainTeam(need()) ?? fail("Only captains can change pairs");
       if (d.revealed) fail("Pairs are already revealed");
       const cur = rows.get(`pairs:${team}`) ?? {};
