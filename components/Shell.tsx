@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAME } from "@/lib/config";
-import { betStatus } from "@/lib/logic";
+import { allPools } from "@/lib/logic";
 import { useGame } from "./GameProvider";
 import { Avatar } from "./ui";
 
@@ -64,7 +64,9 @@ export function BottomNav() {
   const path = usePathname();
   const { state, d } = useGame();
   const openBets =
-    state && d ? state.bets.filter((b) => b.creatorId !== state.me && betStatus(b, d).status === "open").length : 0;
+    state && d
+      ? allPools(state, d).filter((p) => p.status === "open" && !p.stakes.some((x) => x.playerId === state.me)).length
+      : 0;
   const items = [
     { href: "/", label: "Board", icon: I.board, match: (p: string) => p === "/" || p.startsWith("/match") || p.startsWith("/draft") || p.startsWith("/day2") || p.startsWith("/victory") },
     { href: "/bets", label: "Bets", icon: I.bets, badge: openBets, match: (p: string) => p.startsWith("/bets") },
