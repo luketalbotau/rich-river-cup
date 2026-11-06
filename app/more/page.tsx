@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useGame } from "@/components/GameProvider";
 import { Avatar, Button, Card, Loading, SectionTitle, teamText } from "@/components/ui";
 import { ADMIN_ID } from "@/lib/config";
-import { pname, timeAgo } from "@/lib/logic";
 
 export default function MorePage() {
   const { state: s, d, me, act, toast } = useGame();
@@ -39,10 +38,18 @@ export default function MorePage() {
       </Card>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-semibold">
-        <Link href="/draft" className="rounded-xl border border-line bg-card py-3">🃏<br />Draft</Link>
+        <Link href="/draft" className="rounded-xl border border-line bg-card py-3">📋<br />Draft</Link>
         <Link href="/day2" className="rounded-xl border border-line bg-card py-3">🤝<br />Day 2 pairs</Link>
         <Link href="/victory" className="rounded-xl border border-line bg-card py-3">🏆<br />Victory</Link>
       </div>
+      <Link href="/players" className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card px-3 py-3 text-sm font-semibold">
+        <span>🃏 Squad</span>
+        <span className="text-xs text-muted">Player cards →</span>
+      </Link>
+      <Link href="/ledger" className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card px-3 py-3 text-sm font-semibold">
+        <span>💸 Who owes who</span>
+        <span className="text-xs text-muted">For after the weekend →</span>
+      </Link>
 
       {myTeam && (
         <>
@@ -115,34 +122,6 @@ export default function MorePage() {
         </>
       )}
 
-      <SectionTitle right={<span className="text-xs text-muted">Last {s.activity.length}</span>}>Activity</SectionTitle>
-      <div className="overflow-hidden rounded-2xl border border-line bg-card">
-        {s.activity.length === 0 && <div className="p-4 text-center text-sm text-muted">Nothing yet.</div>}
-        {s.activity.map((a) => (
-          <div key={a.id} className={`flex items-start gap-2 border-b border-line px-3 py-2.5 text-sm last:border-0 ${a.undone ? "opacity-40" : ""}`}>
-            <div className="min-w-0 flex-1">
-              <div className={a.undone ? "line-through" : ""}>{a.text}</div>
-              <div className="text-[11px] text-muted">
-                {timeAgo(a.at)}
-                {a.by ? ` · ${pname(s, a.by)}` : ""}
-              </div>
-            </div>
-            {a.undo && !a.undone && me && (
-              <button onClick={() => act("undo", { id: a.id })} className="shrink-0 rounded-lg border border-line px-2 py-1 text-xs font-semibold">
-                Undo
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <SectionTitle>Rules</SectionTitle>
-      <Card className="space-y-2 p-4 text-sm text-white/80">
-        <p><b className="text-white">Day 1 · Singles.</b> 4 matches, stroke play. Win a hole = 1 point.</p>
-        <p><b className="text-white">Day 2 · 2-ball scramble.</b> 2 matches, stroke play. Win a hole = 2 points.</p>
-        <p>Halved holes = 0. Most points across both days wins. A tie stays a draw.</p>
-        <p><b className="text-white">Bets</b> are head-to-head IOUs. Draws and halved holes void the bet.</p>
-      </Card>
     </div>
   );
 }
