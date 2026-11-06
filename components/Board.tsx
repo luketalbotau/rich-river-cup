@@ -1,5 +1,6 @@
 "use client";
 
+import { POINTS } from "@/lib/config";
 import Link from "next/link";
 import { matchStatusText, momentum, timeAgo, type Derived, type MatchView } from "@/lib/logic";
 import type { State } from "@/lib/types";
@@ -48,7 +49,7 @@ export function MatchCard({ mv, s }: { mv: MatchView; s: State }) {
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-display text-sm font-bold uppercase tracking-wider text-muted">{match.title}</span>
-          <span className="text-[10px] font-bold text-muted/70">{match.day === 2 ? "2 PTS/HOLE" : "1 PT/HOLE"}</span>
+          <span className="text-[10px] font-bold text-muted/70">{POINTS[match.day] === 1 ? "1 PT/HOLE" : `${POINTS[match.day]} PTS/HOLE`}</span>
         </div>
         {live ? <Live /> : sum.complete ? <Pill className="bg-white/10 text-white/70">Final</Pill> : <Pill className="bg-white/5 text-muted">Upcoming</Pill>}
       </div>
