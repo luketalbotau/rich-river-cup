@@ -3,28 +3,15 @@
 import Link from "next/link";
 import { useGame } from "@/components/GameProvider";
 import { Avatar, Loading, teamText } from "@/components/ui";
-import { POINTS } from "@/lib/config";
-import type { Side } from "@/lib/types";
+import { individualPoints } from "@/lib/logic";
 
 export default function LeadersPage() {
   const { state: s, d } = useGame();
   if (!s || !d) return <Loading />;
 
-  const rows = s.players.map((p) => {
-    let d1 = 0, d2 = 0, holes = 0;
-    for (const m of d.matches) {
-      const side: Side | null = m.match.a.includes(p.id) ? "A" : m.match.b.includes(p.id) ? "B" : null;
-      if (!side) continue;
-      const won = side === "A" ? m.sum.wonA : m.sum.wonB;
-      holes += won;
-      if (m.match.day === 1) d1 += won * POINTS[1];
-      else d2 += won * POINTS[2];
-    }
-    return { p, d1, d2, total: d1 + d2, holes };
-  });
-  rows.sort((a, b) => b.total - a.total || b.d1 - a.d1 || a.p.name.localeCompare(b.p.name));
+  const rows = individualPoints(s, d).map((r) => ({ ...r, p: s.players.find((x) => x.id === r.id)! }));
   // Equal totals share a rank
-  const ranks = rows.map((r, i) => (i > 0 && rows[i - 1].total === r.total ? null : i + 1));
+  const ranks = rows.map((r, i) => (i > 0 && rows[i - 1].total === r.total && rows[i - 1].d2 === r.d2 ? null : i + 1));
   let last = 1;
   const rankOf = ranks.map((r) => (r == null ? last : (last = r)));
 
@@ -32,7 +19,7 @@ export default function LeadersPage() {
     <div>
       <h1 className="pt-2 font-display text-4xl font-black uppercase italic leading-none">Leaders</h1>
       <p className="mt-2 text-xs text-muted">
-        Each player&rsquo;s points. Day 1: 1 point for each hole you win. Day 2: 2 points for each hole your pair wins, and both players in the pair get them.
+        Each player&rsquo;s points. Day 1 (scramble): 1 point for each hole your pair wins, and both players get it. Day 2 (singles): 1 point for each hole you win. If players have the same points, whoever won more Day 2 holes is ahead.
       </p>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-card">
