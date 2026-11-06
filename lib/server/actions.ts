@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { ADMIN_ID, CAPTAINS, HOLES } from "../config";
-import { derive, marketOutcome, pname, roster, sideLabel, sideNames, round2, money, marketLabel } from "../logic";
-import type { Activity, Bet, HoleWinner, Market, Payment, Side, State, TeamId, Undo } from "../types";
+import { derive, marketOutcome, pname, roster, sideLabel, sideNames, round2, money, marketLabel, poolView, stakeWeight, holesInMarket, canPullStake, type PoolMarket } from "../logic";
+import type { Activity, Bet, HoleWinner, Market, Payment, Side, Stake, State, TeamId, Undo } from "../types";
 import { checkPin, hashPin, type PinRecord } from "./auth";
 import { buildState } from "./state";
 import * as db from "./store";
@@ -281,6 +281,50 @@ export async function runAction(
       if (bet!.creatorId !== id) fail("Only the person who posted it can cancel");
       if (bet!.takerId) fail("Already taken, can't cancel");
       await db.put([[`bet:${bet!.id}`, { ...bet, cancelled: true }]]);
+      return {};
+    }
+    // ---------------- pools ----------------
+    case "placeStake": {
+      const id = need();
+      const market = String(body.market) as PoolMarket;
+      if (market !== "overall" && market !== "match") fail("Bad market");
+      const matchId = market === "match" ? String(body.matchId) : undefined;
+      const side = body.side === "A" || body.side === "B" ? (body.side as Side) : fail("Pick a side");
+      const amount = round2(Number(body.amount));
+      if (!(amount >= 1) || amount > 100000) fail("Enter an amount of at least $1");
+      const pool = poolView(s, d, market, matchId);
+      if (market === "match" && !d.byId[matchId!]) fail("Unknown match");
+      if (!pool.ready) fail(market === "overall" ? "Wait until the draft is done" : "That match isn't set yet");
+      if (pool.outcome) fail("Too late, that's been decided");
+      const stake: Stake = {
+        id: newId(),
+        playerId: id,
+        market,
+        matchId,
+        side: side!,
+        amount,
+        weight: stakeWeight(amount, pool.p[side!]),
+        holesAtBet: holesInMarket(s, market, matchId),
+        at: Date.now(),
+      };
+      const name = sideLabel(s, d, market, matchId, side!);
+      await db.put([
+        [`stake:${stake.id}`, stake],
+        activity(id, `🎟️ ${pname(s, id)} put ${money(amount)} on ${name} (${pool.label})`),
+      ]);
+      return {};
+    }
+    case "pullStake": {
+      const id = need();
+      const stake = rows.get(`stake:${String(body.stakeId)}`) as Stake | undefined;
+      if (!stake || stake.cancelled) fail("Bet not found");
+      if (stake!.playerId !== id) fail("That's not your bet");
+      const pool = poolView(s, d, stake!.market, stake!.matchId);
+      if (!canPullStake(s, pool, stake!)) fail("Holes have been played since you bet, so it's locked in");
+      await db.put([
+        [`stake:${stake!.id}`, { ...stake, cancelled: true }],
+        activity(id, `↩️ ${pname(s, id)} pulled ${money(stake!.amount)} off ${sideLabel(s, d, stake!.market, stake!.matchId, stake!.side)} (${pool.label})`),
+      ]);
       return {};
     }
     case "markPaid": {

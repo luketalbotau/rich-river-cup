@@ -1,5 +1,5 @@
 import { CAPTAINS, DEFAULT_TEAM_NAMES, PLAYERS } from "../config";
-import type { Activity, Bet, HoleResult, Pairs, Payment, Player, State, TeamId } from "../types";
+import type { Activity, Bet, HoleResult, Pairs, Payment, Player, Stake, State, TeamId } from "../types";
 
 /** Build the public game state from raw rows. Hides PINs and the other team's unrevealed pairs. */
 export function buildState(rows: Map<string, any>, me: string | null): State {
@@ -40,6 +40,7 @@ export function buildState(rows: Map<string, any>, me: string | null): State {
 
   const holes: HoleResult[] = [];
   const bets: Bet[] = [];
+  const stakes: Stake[] = [];
   const payments: Payment[] = [];
   const activity: Activity[] = [];
   for (const [key, value] of rows) {
@@ -47,12 +48,14 @@ export function buildState(rows: Map<string, any>, me: string | null): State {
       const [, matchId, hole] = key.split(":");
       holes.push({ matchId, hole: Number(hole), ...value });
     } else if (key.startsWith("bet:")) bets.push(value);
+    else if (key.startsWith("stake:")) stakes.push(value);
     else if (key.startsWith("pay:")) payments.push(value);
     else if (key.startsWith("act:")) activity.push(value);
   }
   bets.sort((a, b) => b.createdAt - a.createdAt);
+  stakes.sort((a, b) => b.at - a.at);
   payments.sort((a, b) => b.at - a.at);
   activity.sort((a, b) => b.at - a.at);
 
-  return { me, players, teams, pairs, holes, bets, payments, activity: activity.slice(0, 150) };
+  return { me, players, teams, pairs, holes, bets, stakes, payments, activity: activity.slice(0, 150) };
 }
