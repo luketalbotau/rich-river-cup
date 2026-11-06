@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { fmtOdds, matchStatusText, momentum, timeAgo, type Derived, type MatchView } from "@/lib/logic";
+import { matchStatusText, momentum, timeAgo, type Derived, type MatchView } from "@/lib/logic";
 import type { State } from "@/lib/types";
-import { AvatarStack, Live, OddsChip, Pill, teamText } from "./ui";
+import { AvatarStack, Live, Pill, teamText } from "./ui";
 
 export function Badges({ mv, s }: { mv: MatchView; s: State }) {
   const { sum, match } = mv;
@@ -23,14 +23,13 @@ export function Badges({ mv, s }: { mv: MatchView; s: State }) {
 }
 
 export function MatchCard({ mv, s }: { mv: MatchView; s: State }) {
-  const { match, sum, probs } = mv;
+  const { match, sum } = mv;
   const players = (ids: string[]) => ids.map((id) => s.players.find((p) => p.id === id)!).filter(Boolean);
   const live = sum.played > 0 && !sum.complete;
   const row = (side: "A" | "B") => {
     const ids = side === "A" ? match.a : match.b;
     const won = side === "A" ? sum.wonA : sum.wonB;
     const leading = side === "A" ? sum.lead > 0 : sum.lead < 0;
-    const p = side === "A" ? probs.a : probs.b;
     return (
       <div className="flex items-center gap-3">
         <span className={`h-8 w-1 rounded-full ${side === "A" ? "bg-ta" : "bg-tb"}`} />
@@ -41,7 +40,6 @@ export function MatchCard({ mv, s }: { mv: MatchView; s: State }) {
           </div>
         </div>
         <span className={`w-8 text-right font-display text-2xl font-bold tabular ${leading ? teamText[side] : "text-white/60"}`}>{won}</span>
-        <OddsChip odds={fmtOdds(p)} tone={side} />
       </div>
     );
   };

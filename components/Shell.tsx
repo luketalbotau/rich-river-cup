@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAME } from "@/lib/config";
-import { allPools } from "@/lib/logic";
 import { useGame } from "./GameProvider";
 import { Avatar } from "./ui";
 
@@ -68,16 +67,11 @@ export function Header() {
 
 export function BottomNav() {
   const path = usePathname();
-  const { state, d } = useGame();
-  const openBets =
-    state && d
-      ? allPools(state, d).filter((p) => p.status === "open" && !p.stakes.some((x) => x.playerId === state.me)).length
-      : 0;
   const items = [
     { href: "/", label: "Scoring", icon: I.scoring, match: (p: string) => p === "/" || p.startsWith("/match") || p.startsWith("/draft") || p.startsWith("/day2") || p.startsWith("/victory") },
     { href: "/teams", label: "Teams", icon: I.teams, match: (p: string) => p.startsWith("/teams") },
     { href: "/leaders", label: "Leaders", icon: I.leaders, match: (p: string) => p.startsWith("/leaders") },
-    { href: "/bets", label: "Bets", icon: I.bets, badge: openBets, match: (p: string) => p.startsWith("/bets") },
+    { href: "/bets", label: "Bets", icon: I.bets, match: (p: string) => p.startsWith("/bets") },
     { href: "/more", label: "More", icon: I.more, match: (p: string) => p.startsWith("/more") || p.startsWith("/ledger") || p.startsWith("/players") || p.startsWith("/login") },
   ];
   return (
@@ -90,11 +84,6 @@ export function BottomNav() {
               {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-neon shadow-[0_0_12px_#00f08a]" />}
               <Icon d={it.icon} />
               {it.label}
-              {!!it.badge && (
-                <span className="absolute right-[22%] top-1 min-w-[18px] rounded-full bg-gold px-1 text-center text-[10px] font-bold text-black">
-                  {it.badge}
-                </span>
-              )}
             </Link>
           );
         })}
