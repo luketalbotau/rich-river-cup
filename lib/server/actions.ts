@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { ADMIN_ID, CAPTAINS, HOLES } from "../config";
-import { derive, marketOutcome, pname, roster, sideLabel, sideNames, round2, money, marketLabel, poolView, stakeWeight, holesInMarket, canPullStake, type PoolMarket } from "../logic";
+import { derive, marketOutcome, pname, roster, sideLabel, sideNames, round2, money, marketLabel, poolView, POOL_MARKETS, POOL_TEXT, type PoolMarket } from "../logic";
 import type { Activity, Bet, HoleWinner, Market, Payment, Side, Stake, State, TeamId, Undo } from "../types";
 import { checkPin, hashPin, type PinRecord } from "./auth";
 import { buildState } from "./state";
@@ -283,47 +283,41 @@ export async function runAction(
       await db.put([[`bet:${bet!.id}`, { ...bet, cancelled: true }]]);
       return {};
     }
-    // ---------------- pools ----------------
+    // ---------------- weekend winner pool ----------------
     case "placeStake": {
       const id = need();
-      const market = String(body.market) as PoolMarket;
-      if (market !== "overall" && market !== "match") fail("Bad market");
-      const matchId = market === "match" ? String(body.matchId) : undefined;
-      const side = body.side === "A" || body.side === "B" ? (body.side as Side) : fail("Pick a side");
+      const market = (body.market ?? "overall") as PoolMarket;
+      if (!POOL_MARKETS.includes(market)) fail("Unknown bet");
+      const side = body.side === "A" || body.side === "B" ? (body.side as Side) : fail("Pick a team");
       const amount = round2(Number(body.amount));
       if (!(amount >= 1) || amount > 100000) fail("Enter an amount of at least $1");
-      const pool = poolView(s, d, market, matchId);
-      if (market === "match" && !d.byId[matchId!]) fail("Unknown match");
-      if (!pool.ready) fail(market === "overall" ? "Wait until the draft is done" : "That match isn't set yet");
+      const pool = poolView(s, d, market);
+      if (!pool.ready) fail("Betting opens when the draft is done");
       if (pool.outcome) fail("Too late, that's been decided");
-      const stake: Stake = {
-        id: newId(),
-        playerId: id,
-        market,
-        matchId,
-        side: side!,
-        amount,
-        weight: stakeWeight(amount, pool.p[side!]),
-        holesAtBet: holesInMarket(s, market, matchId),
-        at: Date.now(),
-      };
-      const name = sideLabel(s, d, market, matchId, side!);
+      const otherSide: Side = side === "A" ? "B" : "A";
+      if (pool.stakes.some((x) => x.playerId === id && x.side === otherSide))
+        fail(`You already bet on ${s.teams[otherSide].name}. You can only bet on one team`);
+      const stake: Stake = { id: newId(), playerId: id, market, side: side!, amount, at: Date.now() };
       await db.put([
         [`stake:${stake.id}`, stake],
-        activity(id, `🎟️ ${pname(s, id)} put ${money(amount)} on ${name} (${pool.label})`),
+        activity(id, `🎟️ ${pname(s, id)} bet ${money(amount)} on ${s.teams[side!].name} to ${POOL_TEXT[market].win}`),
       ]);
       return {};
     }
-    case "pullStake": {
+    case "takeBackUnmatched": {
       const id = need();
       const stake = rows.get(`stake:${String(body.stakeId)}`) as Stake | undefined;
       if (!stake || stake.cancelled) fail("Bet not found");
       if (stake!.playerId !== id) fail("That's not your bet");
-      const pool = poolView(s, d, stake!.market, stake!.matchId);
-      if (!canPullStake(s, pool, stake!)) fail("Holes have been played since you bet, so it's locked in");
+      const pool = poolView(s, d, stake!.market ?? "overall");
+      if (pool.outcome) fail("That's already been decided");
+      const m = pool.matched[stake!.id] ?? 0;
+      const unmatched = round2(stake!.amount - m);
+      if (!(unmatched > 0.004)) fail("All of this bet is matched, so it can't be taken back");
+      const next = m > 0.004 ? { ...stake, amount: m } : { ...stake, cancelled: true };
       await db.put([
-        [`stake:${stake!.id}`, { ...stake, cancelled: true }],
-        activity(id, `↩️ ${pname(s, id)} pulled ${money(stake!.amount)} off ${sideLabel(s, d, stake!.market, stake!.matchId, stake!.side)} (${pool.label})`),
+        [`stake:${stake!.id}`, next],
+        activity(id, `↩️ ${pname(s, id)} took back ${money(unmatched)} that wasn't matched`),
       ]);
       return {};
     }
