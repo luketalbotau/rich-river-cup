@@ -5,9 +5,9 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Badges } from "@/components/Board";
 import { useGame } from "@/components/GameProvider";
-import { AvatarStack, Empty, Live, Loading, OddsChip, Pill, teamText } from "@/components/ui";
+import { AvatarStack, Empty, Live, Loading, Pill, teamText } from "@/components/ui";
 import { HOLES, POINTS } from "@/lib/config";
-import { fmtOdds, matchStatusText } from "@/lib/logic";
+import { matchStatusText } from "@/lib/logic";
 import type { HoleWinner } from "@/lib/types";
 
 export default function MatchPage() {
@@ -17,7 +17,7 @@ export default function MatchPage() {
   if (!s || !d) return <Loading />;
   const mv = d.byId[id];
   if (!mv) return <Empty>Match not found</Empty>;
-  const { match, sum, grid, probs } = mv;
+  const { match, sum, grid } = mv;
   if (!match.ready) {
     return (
       <div className="pt-6">
@@ -83,11 +83,6 @@ export default function MatchPage() {
           <div className="mt-2 text-center text-sm font-semibold">{matchStatusText(s, mv)}</div>
           <div className="mt-1 text-center text-xs text-muted">
             Points: <b className="text-ta">{sum.pointsA}</b> – <b className="text-tb">{sum.pointsB}</b> · {sum.halved} halved
-          </div>
-          <div className="mt-3 flex gap-2">
-            <div className="flex-1"><OddsChip label={short(match.a)} odds={fmtOdds(probs.a)} tone="A" /></div>
-            <div className="w-20"><OddsChip label="Draw" odds={fmtOdds(probs.h)} /></div>
-            <div className="flex-1"><OddsChip label={short(match.b)} odds={fmtOdds(probs.b)} tone="B" /></div>
           </div>
           <div className="mt-2 flex flex-wrap justify-center gap-1.5">
             <Badges mv={mv} s={s} />
