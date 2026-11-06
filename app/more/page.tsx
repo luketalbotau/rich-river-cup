@@ -37,9 +37,8 @@ export default function MorePage() {
         )}
       </Card>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+      <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs font-semibold">
         <Link href="/draft" className="rounded-xl border border-line bg-card py-3">📋<br />Draft</Link>
-        <Link href="/day2" className="rounded-xl border border-line bg-card py-3">🤝<br />Day 2 pairs</Link>
         <Link href="/victory" className="rounded-xl border border-line bg-card py-3">🏆<br />Victory</Link>
       </div>
       <Link href="/players" className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card px-3 py-3 text-sm font-semibold">
