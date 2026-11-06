@@ -63,39 +63,19 @@ export default function Scoring() {
 
       <Ticker s={s} />
 
-      <SectionTitle right={<span className="text-xs text-muted">Singles · 1 pt per hole</span>}>Day 1</SectionTitle>
+      <SectionTitle right={<span className="text-xs text-muted">Scramble · 2 pts per hole</span>}>Day 1</SectionTitle>
       <div className="flex flex-col gap-3">
         {day1.map((mv) => (
           <MatchCard key={mv.match.id} mv={mv} s={s} />
         ))}
       </div>
 
-      <SectionTitle right={<span className="text-xs text-muted">Scramble · 2 pts per hole</span>}>Day 2</SectionTitle>
-      {d.revealed ? (
-        <div className="flex flex-col gap-3">
-          {day2.map((mv) => (
-            <MatchCard key={mv.match.id} mv={mv} s={s} />
-          ))}
-          <Link href="/day2" className="text-center text-xs text-muted underline">
-            Replay the reveal
-          </Link>
-        </div>
-      ) : (
-        <Card className="p-4">
-          <div className="text-sm font-semibold">Pairs are secret until both captains lock in.</div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {(["A", "B"] as TeamId[]).map((t) => (
-              <div key={t} className="rounded-xl bg-black/30 p-2.5 text-center">
-                <div className={`truncate text-xs font-bold uppercase ${teamText[t]}`}>{s.teams[t].name}</div>
-                <div className="mt-1 text-sm">{s.pairs[t].locked ? "🔒 Locked in" : "⏳ Choosing…"}</div>
-              </div>
-            ))}
-          </div>
-          <Button href="/day2" variant="ghost" className="mt-3 w-full">
-            {me?.captain ? "Set your pairs" : "Day 2 pairs"}
-          </Button>
-        </Card>
-      )}
+      <SectionTitle right={<span className="text-xs text-muted">Singles · 1 pt per hole</span>}>Day 2</SectionTitle>
+      <div className="flex flex-col gap-3">
+        {day2.map((mv) => (
+          <MatchCard key={mv.match.id} mv={mv} s={s} />
+        ))}
+      </div>
     </div>
   );
 }
