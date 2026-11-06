@@ -107,7 +107,7 @@ export default function BetsPage() {
                 <div className="truncate font-semibold">{p.name}</div>
                 <div className={`text-[11px] ${p.team ? teamText[p.team] : "text-muted"}`}>{p.team ? s.teams[p.team].name : ""}</div>
               </div>
-              <span className="text-xs text-muted">{behind > 0 ? `${behind} behind` : r.total > 0 ? "leading" : ""}</span>
+              <span className="text-xs text-muted">{behind > 0 ? `${behind} behind` : r.total === 0 ? "" : deal.topIds.includes(r.id) ? "leading" : "level, fewer Day 2 holes"}</span>
               <span className="w-10 text-right font-display text-xl font-bold tabular text-neon">{r.total}</span>
             </div>
           );
