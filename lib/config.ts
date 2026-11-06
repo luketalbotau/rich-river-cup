@@ -26,8 +26,11 @@ export const DRAFT_ORDER: TeamId[] = ["B", "A", "B", "A", "B", "A"];
 
 export const HOLES = 18;
 
-/** Points per hole won, by day. */
-export const POINTS: Record<1 | 2, number> = { 1: 1, 2: 2 };
+/** Team points per hole won, by day. Day 1 is the scramble (2 matches), Day 2 is singles (4 matches). */
+export const POINTS: Record<1 | 2, number> = { 1: 2, 2: 1 };
+
+/** Individual (Leaders) points per hole won, both days. In the scramble, both partners get it. */
+export const INDIVIDUAL_POINTS = 1;
 
 export const DEFAULT_TEAM_NAMES: Record<TeamId, string> = {
   A: "Team Luke",

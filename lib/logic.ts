@@ -1,4 +1,4 @@
-import { CAPTAINS, DRAFT_ORDER, HOLES, ODDS_MODEL, POINTS, STAKE_EACH } from "./config";
+import { CAPTAINS, DRAFT_ORDER, HOLES, INDIVIDUAL_POINTS, ODDS_MODEL, POINTS, STAKE_EACH } from "./config";
 import type {
   Bet,
   HoleWinner,
@@ -56,28 +56,30 @@ export function getMatches(s: State): Match[] {
   const d = draftInfo(s);
   const ra = roster(s, "A");
   const rb = roster(s, "B");
-  const titles = ["Captains' Clash", "1st Picks", "2nd Picks", "3rd Picks"];
+  const ids = (r: Player[], from: number, n: number) => r.slice(from, from + n).map((p) => p.id);
   const out: Match[] = [];
-  for (let i = 0; i < 4; i++) {
+  // Day 1 scramble: pairs come straight from the draft order.
+  const pairTitles = ["Captain & 1st pick", "2nd & 3rd picks"];
+  for (let i = 0; i < 2; i++) {
     out.push({
       id: `d1-${i + 1}`,
       day: 1,
+      title: pairTitles[i],
+      a: d.complete ? ids(ra, i * 2, 2) : [],
+      b: d.complete ? ids(rb, i * 2, 2) : [],
+      ready: d.complete,
+    });
+  }
+  // Day 2 singles: captain v captain, 1st pick v 1st pick, and so on.
+  const titles = ["Captains' Clash", "1st Picks", "2nd Picks", "3rd Picks"];
+  for (let i = 0; i < 4; i++) {
+    out.push({
+      id: `d2-${i + 1}`,
+      day: 2,
       title: titles[i],
       a: ra[i] ? [ra[i].id] : [],
       b: rb[i] ? [rb[i].id] : [],
       ready: d.complete,
-    });
-  }
-  const rev = pairsRevealed(s);
-  for (let i = 0; i < 2; i++) {
-    const k = i === 0 ? "p1" : "p2";
-    out.push({
-      id: `d2-${i + 1}`,
-      day: 2,
-      title: `Scramble ${i + 1}`,
-      a: rev ? s.pairs.A[k] ?? [] : [],
-      b: rev ? s.pairs.B[k] ?? [] : [],
-      ready: d.complete && rev,
     });
   }
   return out;
@@ -248,11 +250,11 @@ export function derive(s: State): Derived {
     byId,
     totals: { ...t, remainingPts, remainingByDay: { 1: rem1 * POINTS[1], 2: rem2 * POINTS[2] }, decided, complete, winner, probs, started: played > 0 },
     draft: draftInfo(s),
-    revealed: pairsRevealed(s),
+    revealed: true,
   };
 }
 
-/** Cumulative team points gap (A minus B) across Day 1 holes 1-18 then Day 2 holes 1-18. */
+/** Cumulative team points gap (A minus B) across Day 1 (scramble) holes 1-18 then Day 2 (singles) holes 1-18. */
 export function momentum(d: Derived): { label: string; diff: number }[] {
   const pts: { label: string; diff: number }[] = [{ label: "Start", diff: 0 }];
   let diff = 0;
@@ -495,12 +497,13 @@ export function individualPoints(s: State, d: Derived): IndividualRow[] {
         const side: Side | null = m.match.a.includes(p.id) ? "A" : m.match.b.includes(p.id) ? "B" : null;
         if (!side) continue;
         const won = side === "A" ? m.sum.wonA : m.sum.wonB;
-        if (m.match.day === 1) d1 += won * POINTS[1];
-        else d2 += won * POINTS[2];
+        if (m.match.day === 1) d1 += won * INDIVIDUAL_POINTS;
+        else d2 += won * INDIVIDUAL_POINTS;
       }
       return { id: p.id, d1, d2, total: d1 + d2 };
     })
-    .sort((a, b) => b.total - a.total);
+    // Level on points: most Day 2 (singles) holes won is ahead.
+    .sort((a, b) => b.total - a.total || b.d2 - a.d2);
 }
 
 export interface DealView {
@@ -524,7 +527,9 @@ export function dealView(s: State, d: Derived): DealView {
   const losingTeam: TeamId | null = teamLeader === "H" ? null : teamLeader === "A" ? "B" : "A";
   const rows = individualPoints(s, d);
   const topPoints = rows[0]?.total ?? 0;
-  const topIds = topPoints > 0 ? rows.filter((r) => r.total === topPoints).map((r) => r.id) : [];
+  const topD2 = rows[0]?.d2 ?? 0;
+  // Most points wins. Level on points: most Day 2 singles holes won. Still level: they split it.
+  const topIds = topPoints > 0 ? rows.filter((r) => r.total === topPoints && r.d2 === topD2).map((r) => r.id) : [];
   const payments: Transfer[] = [];
   const prize: Record<string, number> = {};
   if (losingTeam && topIds.length) {
@@ -628,7 +633,7 @@ export function playerStats(d: Derived, id: string) {
     if (!side) continue;
     const won = side === "A" ? m.sum.wonA : m.sum.wonB;
     holesWon += won;
-    points += won * POINTS[m.match.day];
+    points += won * INDIVIDUAL_POINTS;
     if (m.sum.complete || m.sum.decided) {
       if (m.sum.winner === "H") h++;
       else if (m.sum.winner === side) w++;
@@ -653,13 +658,13 @@ export function fmtOdds(p: number) {
 
 export function matchStatusText(s: State, mv: MatchView): string {
   const { sum, match } = mv;
-  if (!match.ready) return match.day === 2 ? "Pairs not revealed" : "Awaiting draft";
+  if (!match.ready) return "Awaiting draft";
   if (sum.played === 0) return "Not started";
   const lead = Math.abs(sum.lead);
   const leader = sum.lead > 0 ? sideNames(s, match.a) : sideNames(s, match.b);
   if (sum.complete) {
     if (sum.lead === 0) return `Halved ${sum.wonA}–${sum.wonB}`;
-    return `${leader} win ${Math.max(sum.wonA, sum.wonB)}–${Math.min(sum.wonA, sum.wonB)}`;
+    return `${leader} ${match.a.length > 1 ? "win" : "wins"} ${Math.max(sum.wonA, sum.wonB)}–${Math.min(sum.wonA, sum.wonB)}`;
   }
   if (sum.lead === 0) return `All square thru ${sum.played}`;
   return `${leader} ${lead} UP thru ${sum.played}`;
