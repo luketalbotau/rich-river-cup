@@ -51,6 +51,22 @@ export interface Bet {
   cancelled?: boolean;
 }
 
+/** A stake in a pool (parimutuel) market. Winners split the losing side's money. */
+export interface Stake {
+  id: string;
+  playerId: string;
+  market: "match" | "overall";
+  matchId?: string;
+  side: Side;
+  amount: number;
+  /** amount divided by the win probability at the time, so early or underdog money earns a bigger share */
+  weight: number;
+  /** how many holes had been scored in this market when the stake was placed */
+  holesAtBet: number;
+  at: number;
+  cancelled?: boolean;
+}
+
 export interface Payment {
   id: string;
   from: string;
@@ -80,6 +96,7 @@ export interface State {
   pairs: Record<TeamId, Pairs>;
   holes: HoleResult[];
   bets: Bet[];
+  stakes: Stake[];
   payments: Payment[];
   activity: Activity[];
 }
