@@ -5,7 +5,7 @@ import { MatchCard, MomentumChart, Ticker } from "@/components/Board";
 import { useGame } from "@/components/GameProvider";
 import { Avatar, Button, Card, Loading, OddsChip, SectionTitle, teamText } from "@/components/ui";
 import { CAPTAINS } from "@/lib/config";
-import { fmtOdds, pname } from "@/lib/logic";
+import { fmtOdds, money, pname } from "@/lib/logic";
 import type { TeamId } from "@/lib/types";
 
 export default function Board() {
@@ -51,6 +51,7 @@ export default function Board() {
   const diff = totals.A - totals.B;
   const leader: TeamId | null = diff > 0 ? "A" : diff < 0 ? "B" : null;
   const pA = totals.probs.a + totals.probs.h / 2;
+  const weekendPot = s.stakes.filter((x) => !x.cancelled && x.market === "overall").reduce((t, x) => t + x.amount, 0);
   const day1 = d.matches.filter((m) => m.match.day === 1);
   const day2 = d.matches.filter((m) => m.match.day === 2);
 
@@ -96,8 +97,8 @@ export default function Board() {
       <div className="mt-3 rounded-2xl border border-line bg-card p-3">
         <div className="mb-2 flex items-center justify-between">
           <span className="font-display text-sm font-bold uppercase tracking-wider">Weekend Winner</span>
-          <Link href="/bets/new?market=overall" className="text-xs font-bold text-neon">
-            Bet on it →
+          <Link href="/bets#pool-overall" className="text-xs font-bold text-neon">
+            {weekendPot > 0 ? `Pot ${money(weekendPot)} · ` : ""}Bet on it →
           </Link>
         </div>
         <div className="flex gap-2">
