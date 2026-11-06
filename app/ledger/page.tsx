@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGame } from "@/components/GameProvider";
 import { Avatar, Button, Card, Empty, Loading, SectionTitle } from "@/components/ui";
 import { ADMIN_ID } from "@/lib/config";
-import { betStatus, ledger, money, pname, timeAgo } from "@/lib/logic";
+import { allPools, betStatus, ledger, money, pname, timeAgo } from "@/lib/logic";
 
 export default function LedgerPage() {
   const { state: s, d, me, act } = useGame();
@@ -17,6 +17,10 @@ export default function LedgerPage() {
     if (betStatus(b, d).status !== "live") continue;
     exposure[b.creatorId] = (exposure[b.creatorId] ?? 0) + b.creatorStake;
     if (b.takerId) exposure[b.takerId] = (exposure[b.takerId] ?? 0) + b.takerStake;
+  }
+  for (const pool of allPools(s, d)) {
+    if (pool.status !== "open") continue;
+    for (const x of pool.stakes) exposure[x.playerId] = (exposure[x.playerId] ?? 0) + x.amount;
   }
 
   return (
@@ -97,6 +101,20 @@ export default function LedgerPage() {
       </div>
 
       <SectionTitle>Settled bets</SectionTitle>
+      {L.pools.map((pool) => (
+        <div key={pool.id} className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">
+          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">{pool.label} · pool</div>
+          {pool.results.map((r) => (
+            <div key={r.playerId} className="flex items-center justify-between border-b border-line px-3 py-2 text-sm last:border-0">
+              <b>{pname(s, r.playerId)}</b>
+              <span className={`font-display text-lg font-bold ${r.net > 0 ? "text-neon" : "text-tb"}`}>
+                {r.net > 0 ? "+" : ""}
+                {money(r.net)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
       {L.settled.length ? (
         <div className="overflow-hidden rounded-2xl border border-line bg-card">
           {L.settled.map(({ bet, st }) => (
@@ -108,7 +126,7 @@ export default function LedgerPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : L.pools.length ? null : (
         <Empty>No settled bets yet.</Empty>
       )}
 
