@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useGame } from "@/components/GameProvider";
 import { Avatar, Button, Card, Empty, Loading, SectionTitle } from "@/components/ui";
@@ -26,10 +27,11 @@ export default function LedgerPage() {
   return (
     <div>
       <div className="pt-2">
-        <div className="text-xs font-bold uppercase tracking-[0.2em] text-neon">IOU Ledger</div>
+        <Link href="/more" className="text-xs font-semibold text-muted">← More</Link>
+        <div className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-neon">IOU Ledger</div>
         <h1 className="font-display text-4xl font-black uppercase italic leading-none">Who Owes Who</h1>
         <p className="mt-2 text-xs text-muted">
-          Debts are simplified to the fewest transfers. Pay by bank transfer or PayID, then tap &ldquo;Mark paid&rdquo;.
+          This adds up every bet once it is decided, and works out the fewest payments to settle everything. Pay by bank transfer or PayID, then tap &ldquo;Mark paid&rdquo;.
         </p>
       </div>
 
@@ -74,7 +76,7 @@ export default function LedgerPage() {
         <Empty>All square. Nobody owes anybody.</Empty>
       )}
 
-      <SectionTitle>Punter leaderboard</SectionTitle>
+      <SectionTitle>Betting leaderboard</SectionTitle>
       <div className="overflow-hidden rounded-2xl border border-line bg-card">
         {ranked.map((p, i) => {
           const v = L.pnl[p.id];
@@ -103,7 +105,7 @@ export default function LedgerPage() {
       <SectionTitle>Settled bets</SectionTitle>
       {L.pools.map((pool) => (
         <div key={pool.id} className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">
-          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">{pool.label} · pool</div>
+          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">{pool.label}</div>
           {pool.results.map((r) => (
             <div key={r.playerId} className="flex items-center justify-between border-b border-line px-3 py-2 text-sm last:border-0">
               <b>{pname(s, r.playerId)}</b>
@@ -140,11 +142,20 @@ export default function LedgerPage() {
                   💸 <b>{pname(s, p.from)}</b> paid <b>{pname(s, p.to)}</b>
                   <span className="block text-[11px] text-muted">{timeAgo(p.at)} · marked by {pname(s, p.by)}</span>
                 </span>
-                <span className="font-display text-lg font-bold text-neon">{money(p.amount)}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-display text-lg font-bold text-neon">{money(p.amount)}</span>
+                  {me && (() => {
+                    const a = s.activity.find((x) => x.undo?.type === "payment" && x.undo.id === p.id && !x.undone);
+                    return a ? (
+                      <button onClick={() => act("undo", { id: a.id })} className="rounded-lg border border-line px-2 py-1 text-xs font-semibold">
+                        Undo
+                      </button>
+                    ) : null;
+                  })()}
+                </span>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-center text-[11px] text-muted">Marked one by mistake? Undo it from More → Activity.</p>
         </>
       )}
     </div>
