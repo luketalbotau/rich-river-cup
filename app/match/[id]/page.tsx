@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Badges } from "@/components/Board";
 import { useGame } from "@/components/GameProvider";
-import { AvatarStack, Button, Empty, Live, Loading, OddsChip, Pill, teamText } from "@/components/ui";
+import { AvatarStack, Empty, Live, Loading, OddsChip, Pill, teamText } from "@/components/ui";
 import { HOLES, POINTS } from "@/lib/config";
 import { fmtOdds, matchStatusText } from "@/lib/logic";
 import type { HoleWinner } from "@/lib/types";
@@ -52,7 +52,7 @@ export default function MatchPage() {
 
   return (
     <div>
-      <Link href="/" className="text-sm text-muted">← Board</Link>
+      <Link href="/" className="text-sm text-muted">← Scoring</Link>
 
       {/* Header */}
       <div className="relative mt-2 overflow-hidden rounded-3xl border border-line bg-card p-4">
@@ -95,11 +95,6 @@ export default function MatchPage() {
         </div>
       </div>
 
-      <div className="mt-3">
-        <Button href={`/bets#pool-${match.id}`} variant="gold" className="w-full text-sm">
-          Bet on match
-        </Button>
-      </div>
 
       {/* Scorecard */}
       <div className="mt-5 mb-2 flex items-end justify-between px-1">
