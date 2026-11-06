@@ -195,6 +195,8 @@ export interface Totals {
   day1: { A: number; B: number };
   day2: { A: number; B: number };
   remainingPts: number;
+  /** points still to play on each day */
+  remainingByDay: { 1: number; 2: number };
   decided: boolean;
   complete: boolean;
   winner: HoleWinner | null;
@@ -244,7 +246,7 @@ export function derive(s: State): Derived {
   return {
     matches,
     byId,
-    totals: { ...t, remainingPts, decided, complete, winner, probs, started: played > 0 },
+    totals: { ...t, remainingPts, remainingByDay: { 1: rem1 * POINTS[1], 2: rem2 * POINTS[2] }, decided, complete, winner, probs, started: played > 0 },
     draft: draftInfo(s),
     revealed: pairsRevealed(s),
   };
@@ -328,143 +330,154 @@ export function marketProbs(d: Derived, market: Market, matchId?: string): Probs
 }
 
 
-// ---------------- Pools (parimutuel betting) ----------------
-// Everyone puts money on a side. When the market is decided, the winning side
-// splits the losing side's money. Each winner's share is weighted by
-// amount / win-probability at the time of betting, so backing early or backing
-// the underdog earns a bigger slice than piling onto a sure thing late.
+// ---------------- Pools (matched even money) ----------------
+// People put money on a team. Each dollar on one team is matched with a dollar
+// on the other team, first come first served. Matched money is a bet at even
+// money between the two people. Money that never gets matched doesn't count.
 
-export type PoolMarket = "match" | "overall";
+export type PoolMarket = "overall" | "day1" | "day2";
+export const POOL_MARKETS: PoolMarket[] = ["overall", "day1", "day2"];
+
+export const POOL_TEXT: Record<PoolMarket, { label: string; question: string; win: string }> = {
+  overall: { label: "Weekend winner", question: "Who will win the weekend?", win: "win the weekend" },
+  day1: { label: "Day 1 winner", question: "Who will win Day 1?", win: "win Day 1" },
+  day2: { label: "Day 2 winner", question: "Who will win Day 2?", win: "win Day 2" },
+};
+
+/** Winner of one day's points, once it can no longer change. "H" = level. */
+export function dayWinner(d: Derived, day: 1 | 2): HoleWinner | null {
+  const t = day === 1 ? d.totals.day1 : d.totals.day2;
+  const rem = d.totals.remainingByDay[day];
+  const diff = t.A - t.B;
+  if (rem > 0 && Math.abs(diff) <= rem) return null;
+  if (rem === 0 && d.matches.filter((m) => m.match.day === day).some((m) => !m.match.ready)) return null;
+  return diff > 0 ? "A" : diff < 0 ? "B" : "H";
+}
+
+export function poolOutcome(d: Derived, market: PoolMarket): HoleWinner | null {
+  if (market === "overall") return d.totals.winner;
+  return dayWinner(d, market === "day1" ? 1 : 2);
+}
+
+export interface Pairing {
+  /** stake ids */
+  a: string;
+  b: string;
+  amount: number;
+}
 
 export interface PoolResult {
   playerId: string;
-  staked: number;
-  /** + winnings, - money lost, 0 when refunded */
+  /** + money won, - money lost */
   net: number;
 }
 
 export interface PoolView {
   id: string;
   market: PoolMarket;
-  matchId?: string;
   label: string;
-  day: 1 | 2 | null;
-  /** the market exists and can take money (draft done / pairs revealed) */
+  question: string;
+  win: string;
+  /** betting is possible (draft is done) */
   ready: boolean;
   outcome: HoleWinner | null;
-  status: "waiting" | "open" | "settled" | "refunded";
-  inPlay: boolean;
-  holes: number;
+  status: "waiting" | "open" | "settled" | "void";
   stakes: Stake[];
   total: Record<Side, number>;
-  weight: Record<Side, number>;
-  /** current chance of each side winning, ignoring draws */
-  p: Record<Side, number>;
+  /** money matched on each side (the same for both sides) */
+  matchedTotal: number;
+  matched: Record<string, number>;
+  pairings: Pairing[];
   winningSide: Side | null;
   results: PoolResult[];
 }
 
-export function poolKey(market: PoolMarket, matchId?: string) {
-  return market === "overall" ? "overall" : matchId ?? "";
-}
-
-export function holesInMarket(s: State, market: PoolMarket, matchId?: string) {
-  return market === "overall" ? s.holes.length : s.holes.filter((h) => h.matchId === matchId).length;
-}
-
-/** Chance of each side winning, ignoring draws. */
-export function sideChance(d: Derived, market: PoolMarket, matchId?: string): Record<Side, number> {
-  const pr = marketProbs(d, market, matchId);
-  const den = pr.a + pr.b;
-  if (!(den > 0)) return { A: 0.5, B: 0.5 };
-  return { A: pr.a / den, B: pr.b / den };
-}
-
-export function stakeWeight(amount: number, p: number) {
-  return Math.round((amount / Math.min(0.95, Math.max(0.05, p))) * 10000) / 10000;
-}
-
-export function poolView(s: State, d: Derived, market: PoolMarket, matchId?: string): PoolView {
-  const mv = matchId ? d.byId[matchId] : undefined;
-  const ready = market === "overall" ? d.draft.complete : !!mv?.match.ready;
-  const outcome = ready ? marketOutcome(d, { market, matchId }) : null;
-  const stakes = s.stakes.filter((x) => !x.cancelled && x.market === market && (market === "overall" || x.matchId === matchId));
-  const total = { A: 0, B: 0 };
-  const weight = { A: 0, B: 0 };
-  for (const x of stakes) {
-    total[x.side] = round2(total[x.side] + x.amount);
-    weight[x.side] += x.weight;
+function matchStakes(stakes: Stake[]) {
+  const queue: Record<Side, { x: Stake; left: number }[]> = { A: [], B: [] };
+  const matched: Record<string, number> = {};
+  const pairings: Pairing[] = [];
+  for (const x of [...stakes].sort((p, q) => p.at - q.at)) {
+    let left = x.amount;
+    matched[x.id] = 0;
+    const opp = queue[x.side === "A" ? "B" : "A"];
+    while (left > 0.004 && opp.length) {
+      const o = opp[0];
+      const m = round2(Math.min(left, o.left));
+      pairings.push(x.side === "A" ? { a: x.id, b: o.x.id, amount: m } : { a: o.x.id, b: x.id, amount: m });
+      matched[x.id] = round2(matched[x.id] + m);
+      matched[o.x.id] = round2(matched[o.x.id] + m);
+      left = round2(left - m);
+      o.left = round2(o.left - m);
+      if (o.left <= 0.004) opp.shift();
+    }
+    if (left > 0.004) queue[x.side].push({ x, left });
   }
-  const holes = holesInMarket(s, market, matchId);
+  return { matched, pairings };
+}
+
+export function poolView(s: State, d: Derived, market: PoolMarket = "overall"): PoolView {
+  const ready = d.draft.complete;
+  const outcome = ready ? poolOutcome(d, market) : null;
+  const stakes = s.stakes.filter((x) => !x.cancelled && (x.market ?? "overall") === market);
+  const total = { A: 0, B: 0 };
+  for (const x of stakes) total[x.side] = round2(total[x.side] + x.amount);
+  const { matched, pairings } = matchStakes(stakes);
+  const matchedTotal = round2(pairings.reduce((t, p) => t + p.amount, 0));
+  const byId = new Map(stakes.map((x) => [x.id, x]));
   let status: PoolView["status"] = ready ? "open" : "waiting";
   let winningSide: Side | null = null;
-  const byPlayer = new Map<string, PoolResult>();
-  const add = (id: string, staked: number, net: number) => {
-    const r = byPlayer.get(id) ?? { playerId: id, staked: 0, net: 0 };
-    r.staked = round2(r.staked + staked);
-    r.net += net;
-    byPlayer.set(id, r);
-  };
-  if (outcome) {
-    if (outcome === "H" || total.A === 0 || total.B === 0) {
-      status = "refunded";
-      for (const x of stakes) add(x.playerId, x.amount, 0);
-    } else {
-      status = "settled";
-      winningSide = outcome;
-      const lose: Side = outcome === "A" ? "B" : "A";
-      for (const x of stakes) {
-        if (x.side === outcome) add(x.playerId, x.amount, (total[lose] * x.weight) / weight[outcome]);
-        else add(x.playerId, x.amount, -x.amount);
-      }
+  const net = new Map<string, number>();
+  if (outcome === "H") status = "void";
+  else if (outcome) {
+    status = "settled";
+    winningSide = outcome;
+    for (const p of pairings) {
+      const win = byId.get(outcome === "A" ? p.a : p.b)!.playerId;
+      const lose = byId.get(outcome === "A" ? p.b : p.a)!.playerId;
+      net.set(win, (net.get(win) ?? 0) + p.amount);
+      net.set(lose, (net.get(lose) ?? 0) - p.amount);
     }
   }
-  const results = [...byPlayer.values()]
-    .map((r) => ({ ...r, net: round2(r.net) }))
-    .sort((a, b) => b.net - a.net);
+  const results = [...net.entries()].map(([playerId, n]) => ({ playerId, net: round2(n) })).sort((a, b) => b.net - a.net);
   return {
-    id: poolKey(market, matchId),
+    id: market,
     market,
-    matchId,
-    label: market === "overall" ? "Weekend Winner" : mv ? `Day ${mv.match.day} · ${mv.match.title}` : "Match",
-    day: mv ? mv.match.day : null,
+    ...POOL_TEXT[market],
     ready,
     outcome,
     status,
-    inPlay: holes > 0 && !outcome,
-    holes,
     stakes,
     total,
-    weight,
-    p: sideChance(d, market, matchId),
+    matchedTotal,
+    matched,
+    pairings,
     winningSide,
     results,
   };
 }
 
-/** Every pool: the weekend winner, then each match in order. */
+/** Weekend winner, Day 1 winner, Day 2 winner. */
 export function allPools(s: State, d: Derived): PoolView[] {
-  return [poolView(s, d, "overall"), ...d.matches.map((m) => poolView(s, d, "match", m.match.id))];
+  return POOL_MARKETS.map((m) => poolView(s, d, m));
 }
 
-/** What a new stake would win right now if its side wins (before more money comes in). */
-export function estimateWin(pool: PoolView, side: Side, amount: number) {
-  if (!(amount > 0)) return 0;
-  const lose: Side = side === "A" ? "B" : "A";
-  const w = stakeWeight(amount, pool.p[side]);
-  return round2((pool.total[lose] * w) / (pool.weight[side] + w));
+/** How much of a new bet on this side would be matched straight away. */
+export function waitingOnOtherSide(pool: PoolView, side: Side) {
+  const other: Side = side === "A" ? "B" : "A";
+  return round2(pool.stakes.filter((x) => x.side === other).reduce((t, x) => t + x.amount - (pool.matched[x.id] ?? 0), 0));
 }
 
-/** What an existing stake would win right now if its side wins. */
-export function stakeWinNow(pool: PoolView, x: Stake) {
-  const lose: Side = x.side === "A" ? "B" : "A";
-  if (!pool.weight[x.side]) return 0;
-  return round2((pool.total[lose] * x.weight) / pool.weight[x.side]);
-}
-
-/** A stake can be pulled until a hole in its market is scored after it was placed. */
-export function canPullStake(s: State, pool: PoolView, x: Stake) {
-  return !x.cancelled && !pool.outcome && holesInMarket(s, x.market, x.matchId) === x.holesAtBet;
+/** Who a stake is matched with, and for how much. */
+export function stakePartners(pool: PoolView, stakeId: string) {
+  const byId = new Map(pool.stakes.map((x) => [x.id, x]));
+  const out = new Map<string, number>();
+  for (const p of pool.pairings) {
+    const otherId = p.a === stakeId ? p.b : p.b === stakeId ? p.a : null;
+    if (!otherId) continue;
+    const who = byId.get(otherId)!.playerId;
+    out.set(who, round2((out.get(who) ?? 0) + p.amount));
+  }
+  return [...out.entries()].map(([playerId, amount]) => ({ playerId, amount }));
 }
 
 // ---------------- Ledger ----------------

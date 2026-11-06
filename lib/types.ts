@@ -51,18 +51,13 @@ export interface Bet {
   cancelled?: boolean;
 }
 
-/** A stake in a pool (parimutuel) market. Winners split the losing side's money. */
+/** Money put on a team in a team-winner pool (weekend, Day 1 or Day 2). It is matched dollar for dollar with money on the other team. */
 export interface Stake {
   id: string;
   playerId: string;
-  market: "match" | "overall";
-  matchId?: string;
+  market: "overall" | "day1" | "day2";
   side: Side;
   amount: number;
-  /** amount divided by the win probability at the time, so early or underdog money earns a bigger share */
-  weight: number;
-  /** how many holes had been scored in this market when the stake was placed */
-  holesAtBet: number;
   at: number;
   cancelled?: boolean;
 }
