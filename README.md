@@ -1,6 +1,6 @@
 # The Rich River Cup ⛳
 
-A mobile-first golf weekend app for 8 players: live draft, Day 1 singles, Day 2 scramble with secret pairs, live odds, a momentum chart, streak badges, player trading cards, IOU betting with a "who owes who" ledger, and a victory screen.
+A mobile-first golf weekend app for 8 players: live draft, Day 1 singles, Day 2 scramble with secret pairs, a team scoreboard and momentum chart, an individual points leaderboard, player trading cards, IOU betting with a "who owes who" ledger, and a victory screen.
 
 ## Go live (about 10 minutes)
 
@@ -46,9 +46,9 @@ From now on, every push to GitHub redeploys automatically.
 1. **Everyone logs in.** Tap your name, then set a 4-digit PIN the first time. Your phone stays logged in.
 2. **The draft.** Gossy picks first, then Luke, alternating. Only the captain on the clock can pick. Either captain can undo the last pick.
 3. **Day 1.** Four singles matches, 1 point per hole won. Open a match and tap who won each hole (tap again to clear). Anyone logged in can score any match.
-4. **Day 2.** Each captain goes to **Board → Set your pairs**, picks Pair 1, and locks in. The other team can't see your pairs until both captains have locked in, then they're revealed. 2 points per hole won.
-5. **Bets.** Post a head-to-head bet on a hole, a match or the weekend winner. Someone takes the other side. Bets settle automatically from the scores, and draws or halved holes void the bet. **Owed** shows the simplified "who pays who" list.
-6. **Mistakes.** **More → Activity** lists every change with an Undo button.
+4. **Day 2.** Each captain goes to **Scoring → Set your pairs**, picks Pair 1, and locks in. The other team can't see your pairs until both captains have locked in, then they're revealed. 2 points per hole won.
+5. **Bets.** Three bets: weekend winner, Day 1 winner and Day 2 winner. Pick a team and an amount. Each dollar is matched with a dollar on the other team, first come first served, at even money. Unmatched money doesn't count and can be taken back. Each bet settles as soon as it's decided, and a level result means nobody pays. **More → Who owes who** shows the simplified "who pays who" list.
+6. **Mistakes.** Tap a hole again to change or clear its result. Payments marked by mistake can be undone on the Who owes who page.
 
 **Luke (admin)** can reset anyone's PIN and reset the draft from **More**.
 
