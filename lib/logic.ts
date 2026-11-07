@@ -1,4 +1,4 @@
-import { CAPTAINS, DRAFT_ORDER, HOLES, INDIVIDUAL_POINTS, ODDS_MODEL, POINTS, STAKE_EACH } from "./config";
+import { CAPTAINS, DRAFT_ORDER, HOLES, INDIVIDUAL_POINTS, ODDS_MODEL, POINTS, TEAM_PRIZE } from "./config";
 import type {
   Bet,
   HoleWinner,
@@ -70,16 +70,18 @@ export function getMatches(s: State): Match[] {
       ready: d.complete,
     });
   }
-  // Day 2 singles: captain v captain, 1st pick v 1st pick, and so on.
-  const titles = ["Captains' Clash", "1st Picks", "2nd Picks", "3rd Picks"];
-  for (let i = 0; i < 4; i++) {
+  // Day 2 scramble: each captain secretly picks 2 pairs. Pair 1 plays Pair 1.
+  // Hidden until both captains have locked in.
+  const rev = pairsRevealed(s);
+  for (let i = 0; i < 2; i++) {
+    const k = i === 0 ? "p1" : "p2";
     out.push({
-      id: `d2-${i + 1}`,
+      id: `d2p-${i + 1}`,
       day: 2,
-      title: titles[i],
-      a: ra[i] ? [ra[i].id] : [],
-      b: rb[i] ? [rb[i].id] : [],
-      ready: d.complete,
+      title: `Pair ${i + 1}`,
+      a: rev ? s.pairs.A[k] ?? [] : [],
+      b: rev ? s.pairs.B[k] ?? [] : [],
+      ready: d.complete && rev,
     });
   }
   return out;
@@ -250,11 +252,11 @@ export function derive(s: State): Derived {
     byId,
     totals: { ...t, remainingPts, remainingByDay: { 1: rem1 * POINTS[1], 2: rem2 * POINTS[2] }, decided, complete, winner, probs, started: played > 0 },
     draft: draftInfo(s),
-    revealed: true,
+    revealed: pairsRevealed(s),
   };
 }
 
-/** Cumulative team points gap (A minus B) across Day 1 (scramble) holes 1-18 then Day 2 (singles) holes 1-18. */
+/** Cumulative team points gap (A minus B) across Day 1 holes 1-18 then Day 2 holes 1-18 (both scrambles). */
 export function momentum(d: Derived): { label: string; diff: number }[] {
   const pts: { label: string; diff: number }[] = [{ label: "Start", diff: 0 }];
   let diff = 0;
@@ -482,29 +484,10 @@ export function stakePartners(pool: PoolView, stakeId: string) {
   return [...out.entries()].map(([playerId, amount]) => ({ playerId, amount }));
 }
 
-// ---------------- The $50 deal ----------------
-// Every player has $50 at risk. After both days, every player on the losing
-// team pays $50 to the winning individual (most points on the Leaders page).
-// Teams level: nobody pays. Tie for most points: the tied players split it.
-
-export interface IndividualRow { id: string; d1: number; d2: number; total: number }
-
-export function individualPoints(s: State, d: Derived): IndividualRow[] {
-  return s.players
-    .map((p) => {
-      let d1 = 0, d2 = 0;
-      for (const m of d.matches) {
-        const side: Side | null = m.match.a.includes(p.id) ? "A" : m.match.b.includes(p.id) ? "B" : null;
-        if (!side) continue;
-        const won = side === "A" ? m.sum.wonA : m.sum.wonB;
-        if (m.match.day === 1) d1 += won * INDIVIDUAL_POINTS;
-        else d2 += won * INDIVIDUAL_POINTS;
-      }
-      return { id: p.id, d1, d2, total: d1 + d2 };
-    })
-    // Level on points: most Day 2 (singles) holes won is ahead.
-    .sort((a, b) => b.total - a.total || b.d2 - a.d2);
-}
+// ---------------- The team bet ----------------
+// After both days, the losing team pays the winning team TEAM_PRIZE in total.
+// Each losing player pays one winning player an equal share (captain to captain,
+// 1st pick to 1st pick, and so on). Teams level: nobody pays.
 
 export interface DealView {
   /** every hole of both days has been played */
@@ -513,11 +496,11 @@ export interface DealView {
   /** the team ahead right now (or the winner once final). "H" = level */
   teamLeader: HoleWinner;
   losingTeam: TeamId | null;
-  topIds: string[];
-  topPoints: number;
+  /** what each losing player pays */
+  each: number;
   /** who pays who, if it finished right now */
   payments: Transfer[];
-  /** what each top player would receive */
+  /** what each winning player would receive */
   prize: Record<string, number>;
 }
 
@@ -525,25 +508,21 @@ export function dealView(s: State, d: Derived): DealView {
   const diff = d.totals.A - d.totals.B;
   const teamLeader: HoleWinner = diff > 0 ? "A" : diff < 0 ? "B" : "H";
   const losingTeam: TeamId | null = teamLeader === "H" ? null : teamLeader === "A" ? "B" : "A";
-  const rows = individualPoints(s, d);
-  const topPoints = rows[0]?.total ?? 0;
-  const topD2 = rows[0]?.d2 ?? 0;
-  // Most points wins. Level on points: most Day 2 singles holes won. Still level: they split it.
-  const topIds = topPoints > 0 ? rows.filter((r) => r.total === topPoints && r.d2 === topD2).map((r) => r.id) : [];
+  const size = Math.max(1, roster(s, "A").length);
+  const each = round2(TEAM_PRIZE / size);
   const payments: Transfer[] = [];
   const prize: Record<string, number> = {};
-  if (losingTeam && topIds.length) {
-    for (const p of s.players.filter((x) => x.team === losingTeam)) {
-      const to = topIds.filter((id) => id !== p.id);
-      if (!to.length) continue;
-      const each = round2(STAKE_EACH / to.length);
-      for (const id of to) {
-        payments.push({ from: p.id, to: id, amount: each });
-        prize[id] = round2((prize[id] ?? 0) + each);
-      }
-    }
+  if (losingTeam && d.draft.complete) {
+    const losers = roster(s, losingTeam);
+    const winners = roster(s, other(losingTeam));
+    losers.forEach((p, i) => {
+      const to = winners[i % winners.length];
+      if (!to) return;
+      payments.push({ from: p.id, to: to.id, amount: each });
+      prize[to.id] = round2((prize[to.id] ?? 0) + each);
+    });
   }
-  return { final: d.totals.complete, started: d.totals.started, teamLeader, losingTeam, topIds, topPoints, payments, prize };
+  return { final: d.totals.complete, started: d.totals.started, teamLeader, losingTeam, each, payments, prize };
 }
 
 // ---------------- Ledger ----------------
@@ -658,7 +637,7 @@ export function fmtOdds(p: number) {
 
 export function matchStatusText(s: State, mv: MatchView): string {
   const { sum, match } = mv;
-  if (!match.ready) return "Awaiting draft";
+  if (!match.ready) return match.day === 2 ? "Pairs not revealed yet" : "Awaiting draft";
   if (sum.played === 0) return "Not started";
   const lead = Math.abs(sum.lead);
   const leader = sum.lead > 0 ? sideNames(s, match.a) : sideNames(s, match.b);

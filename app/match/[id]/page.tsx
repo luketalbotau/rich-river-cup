@@ -21,7 +21,7 @@ export default function MatchPage() {
   if (!match.ready) {
     return (
       <div className="pt-6">
-        <Empty>Waiting for the draft to finish.</Empty>
+        <Empty>{match.day === 2 ? "Day 2 pairs haven't been revealed yet." : "Waiting for the draft to finish."}</Empty>
       </div>
     );
   }

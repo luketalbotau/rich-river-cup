@@ -1,6 +1,6 @@
 # The Rich River Cup ⛳
 
-A mobile-first golf weekend app for 8 players: live draft, Day 1 scramble, Day 2 singles, a team scoreboard and momentum chart, an individual points leaderboard, player trading cards, a $50 team-v-individual bet with a "who owes who" ledger, and a victory screen.
+A mobile-first golf weekend app for 8 players: live draft, Day 1 scramble, Day 2 scramble with secret pairs, a team scoreboard and momentum chart, player trading cards, a $200 team-v-team bet with a "who owes who" ledger, and a victory screen.
 
 ## Go live (about 10 minutes)
 
@@ -46,13 +46,11 @@ From now on, every push to GitHub redeploys automatically.
 1. **Everyone logs in.** Tap your name, then set a 4-digit PIN the first time. Your phone stays logged in.
 2. **The draft.** Gossy picks first, then Luke, alternating. Only the captain on the clock can pick. Either captain can undo the last pick.
 3. **Day 1 · Scramble.** Two matches. Pairs come from the draft order: each captain plays with their 1st pick, and the 2nd and 3rd picks play together. 2 team points per hole won. Open a match and tap who won each hole (tap again to clear). Anyone logged in can score any match.
-4. **Day 2 · Singles.** Four matches: captain v captain, 1st pick v 1st pick, and so on. 1 team point per hole won.
-
-   **Leaders** gives every player 1 point per hole won on both days (both scramble partners get it). If players are level, most Day 2 holes won is ahead.
-5. **Bets.** One bet for everyone: every player has $50 at risk. After both days, every player on the losing team pays $50 to the winning individual (most points on Leaders). Teams level: nobody pays. Tied winners split it. **More → Who owes who** shows who pays who.
+4. **Day 2 · Scramble.** Two matches. Each captain secretly splits their team into Pair 1 and Pair 2 on the **Day 2 pairs** page. Pair 1 plays the other team's Pair 1. The other team can't see your pairs until both captains have locked in, then they're revealed together. 2 team points per hole won.
+5. **Bets.** One bet: the losing team pays the winning team $200, which is $50 from each losing player to a winning player. Teams level: nobody pays. **More → Who owes who** shows who pays who.
 6. **Mistakes.** Tap a hole again to change or clear its result. Payments marked by mistake can be undone on the Who owes who page.
 
-**Luke (admin)** can reset anyone's PIN and reset the draft from **More**.
+**Luke (admin)** can reset anyone's PIN, reset the Day 2 pairs (before any Day 2 scores) and reset the draft from **More**.
 
 ## Changing things
 

@@ -13,9 +13,6 @@ const I = {
   teams: (
     <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c.6-3.2 3-5 6-5s5.4 1.8 6 5M16 5.2a3 3 0 0 1 0 5.6M18 15.4c1.6.7 2.6 2.3 3 4.6" />
   ),
-  leaders: (
-    <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
-  ),
   bets: (
     <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V7ZM14 5v12" />
   ),
@@ -70,13 +67,12 @@ export function BottomNav() {
   const items = [
     { href: "/", label: "Scoring", icon: I.scoring, match: (p: string) => p === "/" || p.startsWith("/match") || p.startsWith("/draft") || p.startsWith("/day2") || p.startsWith("/victory") },
     { href: "/teams", label: "Teams", icon: I.teams, match: (p: string) => p.startsWith("/teams") },
-    { href: "/leaders", label: "Leaders", icon: I.leaders, match: (p: string) => p.startsWith("/leaders") },
     { href: "/bets", label: "Bets", icon: I.bets, match: (p: string) => p.startsWith("/bets") },
     { href: "/more", label: "More", icon: I.more, match: (p: string) => p.startsWith("/more") || p.startsWith("/ledger") || p.startsWith("/players") || p.startsWith("/login") },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-      <div className="mx-auto grid max-w-md grid-cols-5">
+      <div className="mx-auto grid max-w-md grid-cols-4">
         {items.map((it) => {
           const active = it.match(path);
           return (

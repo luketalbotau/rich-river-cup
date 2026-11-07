@@ -11,6 +11,7 @@ export default function MorePage() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
   const [confirmDraft, setConfirmDraft] = useState(false);
+  const [confirmPairs, setConfirmPairs] = useState(false);
   if (!s || !d) return <Loading />;
   const myTeam = me?.captain ? me.team : null;
   const isAdmin = me?.id === ADMIN_ID;
@@ -37,8 +38,9 @@ export default function MorePage() {
         )}
       </Card>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs font-semibold">
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-semibold">
         <Link href="/draft" className="rounded-xl border border-line bg-card py-3">📋<br />Draft</Link>
+        <Link href="/day2" className="rounded-xl border border-line bg-card py-3">🤝<br />Day 2 pairs</Link>
         <Link href="/victory" className="rounded-xl border border-line bg-card py-3">🏆<br />Victory</Link>
       </div>
       <Link href="/players" className="mt-2 flex items-center justify-between rounded-xl border border-line bg-card px-3 py-3 text-sm font-semibold">
@@ -106,6 +108,18 @@ export default function MorePage() {
               </div>
             ))}
           </Card>
+          {(s.pairs.A.locked || s.pairs.B.locked) && !s.holes.some((h) => h.matchId.startsWith("d2")) && (
+            <div className="mt-3">
+              {confirmPairs ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="ghost" onClick={() => setConfirmPairs(false)}>Cancel</Button>
+                  <Button variant="danger" onClick={async () => { await act("resetPairs"); setConfirmPairs(false); }}>Yes, reset pairs</Button>
+                </div>
+              ) : (
+                <Button variant="danger" className="w-full" onClick={() => setConfirmPairs(true)}>Reset the Day 2 pairs</Button>
+              )}
+            </div>
+          )}
           {!s.holes.length && (
             <div className="mt-3">
               {confirmDraft ? (

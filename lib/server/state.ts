@@ -26,7 +26,7 @@ export function buildState(rows: Map<string, any>, me: string | null): State {
   };
 
   const rawPairs = (t: TeamId): Pairs => {
-    const d = rows.get(`pairs:${t}`);
+    const d = rows.get(`d2pairs:${t}`);
     return { p1: d?.p1 ?? null, p2: d?.p2 ?? null, locked: !!d?.locked };
   };
   const pairs = { A: rawPairs("A"), B: rawPairs("B") };
