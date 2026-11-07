@@ -70,7 +70,18 @@ export default function Scoring() {
         ))}
       </div>
 
-      <SectionTitle right={<span className="text-xs text-muted">Singles · 1 pt per hole</span>}>Day 2</SectionTitle>
+      <SectionTitle right={<span className="text-xs text-muted">Scramble · 2 pts per hole</span>}>Day 2</SectionTitle>
+      {!d.revealed && (
+        <Link href="/day2" className="mb-3 flex items-center justify-between rounded-2xl border border-gold/40 bg-gold/10 p-3 text-sm">
+          <span>
+            <b className="text-gold">🤫 Secret pairs</b>
+            <span className="block text-xs text-muted">
+              {(["A", "B"] as TeamId[]).map((t) => `${s.teams[t].name}: ${s.pairs[t].locked ? "locked in" : "choosing"}`).join(" · ")}
+            </span>
+          </span>
+          <span className="text-xs font-bold text-gold">{me?.captain ? "Pick pairs →" : "View →"}</span>
+        </Link>
+      )}
       <div className="flex flex-col gap-3">
         {day2.map((mv) => (
           <MatchCard key={mv.match.id} mv={mv} s={s} />

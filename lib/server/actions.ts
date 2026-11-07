@@ -32,7 +32,7 @@ function fullState(rows: Map<string, any>, me: string | null): State {
   const s = buildState(rows, null);
   // un-redact pairs for server-side checks
   for (const t of ["A", "B"] as TeamId[]) {
-    const d = rows.get(`pairs:${t}`);
+    const d = rows.get(`d2pairs:${t}`);
     s.pairs[t] = { p1: d?.p1 ?? null, p2: d?.p2 ?? null, locked: !!d?.locked };
   }
   s.me = me;
@@ -117,7 +117,7 @@ export async function runAction(
         .map((p) => [`player:${p.id}`, { ...(rows.get(`player:${p.id}`) ?? {}), team: null, pick: null }]);
       puts.push(activity(me, `🔄 ${pname(s, me!)} reset the draft`));
       await db.put(puts);
-      await db.del(["pairs:A", "pairs:B"]);
+      await db.del(["d2pairs:A", "d2pairs:B"]);
       return {};
     }
 
@@ -133,7 +133,6 @@ export async function runAction(
       return {};
     }
     case "lockPairs": {
-      fail("Pairs are set by the draft order now");
       const team = captainTeam(need()) ?? fail("Only captains can set pairs");
       if (!d.draft.complete) fail("Finish the draft first");
       if (d.revealed) fail("Pairs are already revealed");
@@ -143,7 +142,7 @@ export async function runAction(
       const p2 = ids.filter((x) => !p1.includes(x));
       const otherLocked = s.pairs[team === "A" ? "B" : "A"].locked;
       const puts: [string, unknown][] = [
-        [`pairs:${team}`, { p1, p2, locked: true }],
+        [`d2pairs:${team}`, { p1, p2, locked: true }],
         activity(me, `🔒 ${s.teams[team].name} locked in their Day 2 pairs`),
       ];
       if (otherLocked) puts.push(activity(null, "🎉 Day 2 pairs revealed!"));
@@ -151,14 +150,21 @@ export async function runAction(
       return {};
     }
     case "unlockPairs": {
-      fail("Pairs are set by the draft order now");
       const team = captainTeam(need()) ?? fail("Only captains can change pairs");
       if (d.revealed) fail("Pairs are already revealed");
-      const cur = rows.get(`pairs:${team}`) ?? {};
+      const cur = rows.get(`d2pairs:${team}`) ?? {};
       await db.put([
-        [`pairs:${team}`, { ...cur, locked: false }],
+        [`d2pairs:${team}`, { ...cur, locked: false }],
         activity(me, `🔓 ${s.teams[team].name} unlocked their pairs`),
       ]);
+      return {};
+    }
+
+    case "resetPairs": {
+      if (need() !== ADMIN_ID) fail("Only Luke can reset the Day 2 pairs");
+      if (s.holes.some((h) => h.matchId.startsWith("d2"))) fail("Day 2 scores have been entered. Can't reset the pairs now");
+      await db.del(["d2pairs:A", "d2pairs:B"]);
+      await db.put([activity(me, `🔄 ${pname(s, me!)} reset the Day 2 pairs`)]);
       return {};
     }
 

@@ -105,7 +105,7 @@ export default function LedgerPage() {
       <SectionTitle>Results</SectionTitle>
       {L.deal.final ? (
         <div className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">
-          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">The $50 deal</div>
+          <div className="border-b border-line bg-card2/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">The team bet</div>
           {L.deal.payments.length ? (
             L.deal.payments.map((t, i) => (
               <div key={i} className="flex items-center justify-between border-b border-line px-3 py-2 text-sm last:border-0">
@@ -120,7 +120,7 @@ export default function LedgerPage() {
           )}
         </div>
       ) : (
-        <div className="mb-2 rounded-2xl border border-dashed border-line p-4 text-center text-sm text-muted">The $50 deal is worked out once both days are finished.</div>
+        <div className="mb-2 rounded-2xl border border-dashed border-line p-4 text-center text-sm text-muted">The team bet is worked out once both days are finished.</div>
       )}
       {L.pools.map((pool) => (
         <div key={pool.id} className="mb-2 overflow-hidden rounded-2xl border border-line bg-card">

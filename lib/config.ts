@@ -26,10 +26,10 @@ export const DRAFT_ORDER: TeamId[] = ["B", "A", "B", "A", "B", "A"];
 
 export const HOLES = 18;
 
-/** Team points per hole won, by day. Day 1 is the scramble (2 matches), Day 2 is singles (4 matches). */
-export const POINTS: Record<1 | 2, number> = { 1: 2, 2: 1 };
+/** Team points per hole won, by day. Both days are 2-person scrambles (2 matches each). */
+export const POINTS: Record<1 | 2, number> = { 1: 2, 2: 2 };
 
-/** Individual (Leaders) points per hole won, both days. In the scramble, both partners get it. */
+/** Points per hole won shown on player cards. In a scramble, both partners get it. */
 export const INDIVIDUAL_POINTS = 1;
 
 export const DEFAULT_TEAM_NAMES: Record<TeamId, string> = {
@@ -37,8 +37,8 @@ export const DEFAULT_TEAM_NAMES: Record<TeamId, string> = {
   B: "Team Gossy",
 };
 
-/** What every player has at risk in the $50 deal. */
-export const STAKE_EACH = 50;
+/** The team bet: the losing team pays the winning team this much in total (split evenly, player to player). */
+export const TEAM_PRIZE = 200;
 
 /** Per-hole probabilities used by the live odds model (no handicaps). */
 export const ODDS_MODEL = { win: 0.38, halve: 0.24 };
